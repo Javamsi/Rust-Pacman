@@ -4,3 +4,7 @@ version = "0.1.0"
 authors = ["Vjan"]
 
 [dependencies]
+rand = "0.3"
+piston = "0.26.0"
+piston2d-graphics = "0.16.0"
+piston_window = "0.44.0"
