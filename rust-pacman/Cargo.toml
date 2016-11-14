@@ -1,0 +1,11 @@
+[package]
+name = "pacman"
+version = "0.1.0"
+authors = ["Vjan"]
+
+[dependencies]
+piston = "0.26.0"
+piston2d-graphics = "0.19.0"
+pistoncore-glutin_window = "0.31.0"
+piston2d-opengl_graphics = "0.36.0"
+piston_window = "0.57.0"
