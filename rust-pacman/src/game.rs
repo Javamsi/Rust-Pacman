@@ -4,6 +4,9 @@ extern crate piston_window;
 use piston_window::*;
 use std::fs::File;
 use std::io::{BufRead, BufReader};
+use ghost::Ghost;
+use std::rc::Rc;
+use std::cell::RefCell;
 
 pub struct Game {
 	window: PistonWindow,
@@ -15,6 +18,7 @@ pub struct Game {
 	pac_right: bool,
 	pac_left: bool,
 	next_move: i32,
+	blinky: Ghost,
 }
 
 impl Game {
@@ -46,8 +50,11 @@ impl Game {
 		for (i, line) in file.lines().enumerate() {
 			for (j, number) in line.unwrap().split(char::is_whitespace).enumerate() {
 				let v: Vec<&str> = number.split(",").collect();
-				intersections.push((v[0].parse::<i32>().unwrap(), v[1].parse::<i32>().unwrap()));			}
+				intersections.push((v[0].parse::<i32>().unwrap(), v[1].parse::<i32>().unwrap()));
+			}
 		}
+
+		let mut blinky: Ghost = Ghost::new(String::from("blinky"), 500, 500);
 
 		Game {
 			window: window,
@@ -59,6 +66,7 @@ impl Game {
 			pac_right: false,
 			pac_left: false,
 			next_move: 0,
+			blinky: blinky,
 		}
 	}
 
@@ -255,6 +263,8 @@ impl Game {
 					if self.pac_right {
 						self.pac_loc[0].0 = self.pac_loc[0].0 + 5;
 					}
+					self.blinky.update_pac_loc(self.pac_loc[0].0, self.pac_loc[0].1); 
+					self.blinky.chase();
 				}
 			}
 			
