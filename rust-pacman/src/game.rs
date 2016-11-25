@@ -19,6 +19,10 @@ pub struct Game {
 	pac_left: bool,
 	next_move: i32,
 	blinky: Ghost,
+	pinky: Ghost,
+	inky: Ghost,
+	clyde: Ghost,
+	pac_direction: i32,
 }
 
 impl Game {
@@ -54,7 +58,10 @@ impl Game {
 			}
 		}
 
-		let mut blinky: Ghost = Ghost::new(String::from("blinky"), 500, 500);
+		let mut blinky: Ghost = Ghost::new(String::from("blinky"), 195, 475);
+		let mut pinky: Ghost = Ghost::new(String::from("pinky"), 195, 475);
+		let mut inky: Ghost = Ghost::new(String::from("inky"), 195, 475);
+		let mut clyde: Ghost = Ghost::new(String::from("clyde"), 195, 475);
 
 		Game {
 			window: window,
@@ -67,6 +74,10 @@ impl Game {
 			pac_left: false,
 			next_move: 0,
 			blinky: blinky,
+			pinky: pinky,
+			inky: inky,
+			clyde: clyde,
+			pac_direction: 0,
 		}
 	}
 
@@ -126,6 +137,42 @@ impl Game {
        		});
 		}
 
+		let blinkyx: i32 = self.blinky.get_loc().0;
+		let blinkyy: i32 = self.blinky.get_loc().1;
+		let pinkyx: i32 = self.pinky.get_loc().0;
+		let pinkyy: i32 = self.pinky.get_loc().1;
+		let inkyx: i32 = self.inky.get_loc().0;
+		let inkyy: i32 = self.inky.get_loc().1;
+		let clydex: i32 = self.clyde.get_loc().0;
+		let clydey: i32 = self.clyde.get_loc().1;
+
+		/* Draw Blinky */
+		self.window.draw_2d(&e, |c, g| {
+           	rectangle([1.0, 0.0, 0.0, 1.0], 
+            	[(blinkyx - 5) as f64, (blinkyy - 5) as f64, 20.0, 20.0],
+            	c.transform, g);		         
+       	});
+
+       	/* Draw Pinky */
+		self.window.draw_2d(&e, |c, g| {
+           	rectangle([1.0, 0.0, 0.5, 1.0], 
+            	[(pinkyx - 5) as f64, (pinkyy - 5) as f64, 20.0, 20.0],
+            	c.transform, g);		         
+       	});
+
+       	/* Draw Pinky */
+		self.window.draw_2d(&e, |c, g| {
+           	rectangle([0.0, 0.7, 1.0, 1.0], 
+            	[(inkyx - 5) as f64, (inkyy - 5) as f64, 20.0, 20.0],
+            	c.transform, g);		         
+       	});
+
+       	/* Draw Clyde */
+		self.window.draw_2d(&e, |c, g| {
+           	rectangle([1.0, 0.5, 0.0, 1.0], 
+            	[(clydex - 5) as f64, (clydey - 5) as f64, 20.0, 20.0],
+            	c.transform, g);		         
+       	});
 	}
 
 	pub fn check_collision(&mut self) {
@@ -253,18 +300,29 @@ impl Game {
 					self.check_collision();
 					if self.pac_up {
 						self.pac_loc[0].1 = self.pac_loc[0].1 - 5;
+						self.pac_direction = 1;
 					}
-					if self.pac_down {
+					else if self.pac_down {
 						self.pac_loc[0].1 = self.pac_loc[0].1 + 5;
+						self.pac_direction = 2;
 					}
-					if self.pac_left {
+					else if self.pac_left {
 						self.pac_loc[0].0 = self.pac_loc[0].0 - 5;
+						self.pac_direction = 3;
 					}
-					if self.pac_right {
+					else if self.pac_right {
 						self.pac_loc[0].0 = self.pac_loc[0].0 + 5;
+						self.pac_direction = 4;
 					}
-					self.blinky.update_pac_loc(self.pac_loc[0].0, self.pac_loc[0].1); 
+					self.blinky.update_pac_loc(self.pac_loc[0].0, self.pac_loc[0].1, self.pac_direction); 
 					self.blinky.chase();
+					self.pinky.update_pac_loc(self.pac_loc[0].0, self.pac_loc[0].1, self.pac_direction);
+					self.pinky.chase();
+					self.inky.update_pac_loc(self.pac_loc[0].0, self.pac_loc[0].1, self.pac_direction);
+					self.inky.update_blinky_loc(self.blinky.get_loc().0, self.blinky.get_loc().1);
+					self.inky.chase();
+					self.clyde.update_pac_loc(self.pac_loc[0].0, self.pac_loc[0].1, self.pac_direction);
+					self.clyde.chase();
 				}
 			}
 			
