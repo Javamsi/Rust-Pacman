@@ -396,10 +396,10 @@ impl Ghost {
 			}
 		}
 
-		if self.cur_direction == 1 { self.loc.1 = self.loc.1 - 5; }
-		if self.cur_direction == 2 { self.loc.1 = self.loc.1 + 5; }
-		if self.cur_direction == 3 { self.loc.0 = self.loc.0 - 5; }
-		if self.cur_direction == 4 { self.loc.0 = self.loc.0 + 5; }
+		if self.cur_direction == 1 { self.loc.1 = self.loc.1 - 1; }
+		if self.cur_direction == 2 { self.loc.1 = self.loc.1 + 1; }
+		if self.cur_direction == 3 { self.loc.0 = self.loc.0 - 1; }
+		if self.cur_direction == 4 { self.loc.0 = self.loc.0 + 1; }
 
 		self.directions.clear();
 	} 

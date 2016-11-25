@@ -13,6 +13,7 @@ pub struct Game {
 	pac_loc: Vec<(i32, i32)>,
 	coordinates: Vec<(i32, i32, i32, i32)>,
 	intersections: Vec<(i32, i32)>,
+	pellets: Vec<(i32, i32)>,
 	pac_up: bool,
 	pac_down: bool,
 	pac_right: bool,
@@ -28,7 +29,9 @@ pub struct Game {
 impl Game {
 
 	pub fn new() -> Game  {
+		let opengl = OpenGL::V3_2;
 		let mut window: PistonWindow = WindowSettings::new ("Rust PacMan", (930, 1000))
+		.opengl(opengl)
 		.exit_on_esc(true)
 		.build()
 		.unwrap();
@@ -58,16 +61,28 @@ impl Game {
 			}
 		}
 
-		let mut blinky: Ghost = Ghost::new(String::from("blinky"), 195, 475);
-		let mut pinky: Ghost = Ghost::new(String::from("pinky"), 195, 475);
-		let mut inky: Ghost = Ghost::new(String::from("inky"), 195, 475);
-		let mut clyde: Ghost = Ghost::new(String::from("clyde"), 195, 475);
+		file = BufReader::new(File::open("pellets.txt").unwrap());
+		let mut pellets = Vec::<(i32, i32)>::with_capacity(2);
+
+		// Parse the pellets file for the pellets
+		for (i, line) in file.lines().enumerate() {
+			for (j, number) in line.unwrap().split(char::is_whitespace).enumerate() {
+				let v: Vec<&str> = number.split(",").collect();
+				pellets.push((v[0].parse::<i32>().unwrap(), v[1].parse::<i32>().unwrap()));
+			}
+		}
+
+		let mut blinky: Ghost = Ghost::new(String::from("blinky"), 365, 435);
+		let mut pinky: Ghost = Ghost::new(String::from("pinky"), 425, 435);
+		let mut inky: Ghost = Ghost::new(String::from("inky"), 485, 435);
+		let mut clyde: Ghost = Ghost::new(String::from("clyde"), 545, 435);
 
 		Game {
 			window: window,
 			pac_loc: location,
 			coordinates: coordinates,
 			intersections: intersections,
+			pellets: pellets,
 			pac_up: false,
 			pac_down: false,
 			pac_right: false,
@@ -106,37 +121,12 @@ impl Game {
 
 	pub fn draw(&mut self, ren: RenderArgs, e: Event) {
 
-		self.window.draw_2d(&e, |c, g| {
-           	clear([0.0, 0.0, 0.0, 1.0], g)         
-        });
+		let mut pellets: Vec<(i32,i32)> = Vec::new();
+		let mut coordinates: Vec<(i32, i32, i32, i32)> = Vec::new();
+		let mut pac_loc: Vec<(i32, i32)> = Vec::new();
+		let mut timer: i32 = 0;
 
-		/* Draw the Game Board */
-       	for &(x,y,width,length) in &self.coordinates {
-			self.window.draw_2d(&e, |c, g| {
-           		rectangle([0.0, 0.0, 10.0, 1.0], 
-                 	[x as f64, y as f64, width as f64, length as f64],
-               	    c.transform, g);		         
-       		});
-		}
-
-		/* Draw the Intersections */
-       	for &(x,y) in &self.intersections {
-			self.window.draw_2d(&e, |c, g| {
-           		rectangle([1.0, 0.0, 1.0, 1.0], 
-                 	[(x - 5) as f64, (y - 5) as f64, 20.0, 20.0],
-               	    c.transform, g);		         
-       		});
-		}
-
-		/* Update PacMan */
-		for &(x,y) in &self.pac_loc {
-			self.window.draw_2d(&e, |c, g| {
-           		rectangle([1.0, 1.0, 0.0, 1.0], 
-                     [(x - 5) as f64, (y - 5) as f64, 20.0, 20.0],
-                     c.transform, g);		         
-       		});
-		}
-
+		/* Ghosts */
 		let blinkyx: i32 = self.blinky.get_loc().0;
 		let blinkyy: i32 = self.blinky.get_loc().1;
 		let pinkyx: i32 = self.pinky.get_loc().0;
@@ -146,33 +136,99 @@ impl Game {
 		let clydex: i32 = self.clyde.get_loc().0;
 		let clydey: i32 = self.clyde.get_loc().1;
 
-		/* Draw Blinky */
+		/* Pellets */
+		for &(x,y) in &self.pellets {
+			pellets.push((x,y));
+		}
+
+		/* Walls */
+		for &(x,y,width,length) in &self.coordinates {
+			coordinates.push((x,y,width,length));
+		}
+
+		/* Pac Man */
+		for &(x,y) in &self.pac_loc {
+			pac_loc.push((x,y));
+		}
+
+		/* Draw Everything */
 		self.window.draw_2d(&e, |c, g| {
+           	clear([0.0, 0.0, 0.0, 1.0], g); 
+
+           	/* Draw the Game Board */
+           	for (x,y,width,length) in coordinates {
+           		rectangle([0.0, 0.0, 10.0, 1.0], 
+                 	[x as f64, y as f64, width as f64, length as f64],
+               	    c.transform, g);
+           	}      		
+        });
+
+		/* Draw the Pellets */
+        self.window.draw_2d(&e, |c, g| {
+           	for (x,y) in pellets {
+          		rectangle([1.0, 1.0, 0.0, 1.0], 
+                     [(x - 3) as f64, (y - 3) as f64, 15.0, 15.0],
+                     c.transform, g);	           		
+           	}
+        });
+
+        /* Draw Pac Man */
+        self.window.draw_2d(&e, |c, g| {
+           	for (x,y) in pac_loc {
+          		rectangle([1.0, 1.0, 0.0, 1.0], 
+                     [(x - 5) as f64, (y - 5) as f64, 20.0, 20.0],
+                     c.transform, g);	
+           	} 
+        });
+
+        self.window.draw_2d(&e, |c, g| {
+            /* Draw Blinky */
            	rectangle([1.0, 0.0, 0.0, 1.0], 
             	[(blinkyx - 5) as f64, (blinkyy - 5) as f64, 20.0, 20.0],
-            	c.transform, g);		         
-       	});
+            	c.transform, g);
 
-       	/* Draw Pinky */
-		self.window.draw_2d(&e, |c, g| {
+           	/* Draw Pinky */
            	rectangle([1.0, 0.0, 0.5, 1.0], 
             	[(pinkyx - 5) as f64, (pinkyy - 5) as f64, 20.0, 20.0],
-            	c.transform, g);		         
-       	});
+            	c.transform, g);     
 
-       	/* Draw Pinky */
-		self.window.draw_2d(&e, |c, g| {
-           	rectangle([0.0, 0.7, 1.0, 1.0], 
+           	/* Draw Inky */
+            rectangle([0.0, 0.7, 1.0, 1.0], 
             	[(inkyx - 5) as f64, (inkyy - 5) as f64, 20.0, 20.0],
-            	c.transform, g);		         
-       	});
+            	c.transform, g);	
 
-       	/* Draw Clyde */
-		self.window.draw_2d(&e, |c, g| {
+           	/* Draw Clyde */
            	rectangle([1.0, 0.5, 0.0, 1.0], 
             	[(clydex - 5) as f64, (clydey - 5) as f64, 20.0, 20.0],
-            	c.transform, g);		         
-       	});
+            	c.transform, g); 
+        });
+
+        while timer < 100 {
+        	timer = timer + 1;
+        }
+
+		/* Draw the Intersections */
+       	/*for &(x,y) in &self.intersections {
+			self.window.draw_2d(&e, |c, g| {
+           		rectangle([1.0, 0.0, 1.0, 1.0], 
+                 	[(x - 5) as f64, (y - 5) as f64, 20.0, 20.0],
+               	    c.transform, g);		         
+       		});
+		}*/
+
+	}
+
+	pub fn check_pellet(&mut self) {
+		let mut counter: usize = 0;
+		for &(x,y) in &self.pellets {
+			if self.pac_loc[0].0 == self.pellets[counter].0 && self.pac_loc[0].1 == self.pellets[counter].1 {
+				break;
+			}
+			counter = counter + 1;
+		}
+		if (counter < self.pellets.len()) {
+			self.pellets.remove(counter); 
+		}
 	}
 
 	pub fn check_collision(&mut self) {
@@ -294,24 +350,22 @@ impl Game {
 					self.draw(ren, e);
 				},
 				Event::Update(upd) => {
-
-				},
-				_ => {
-					self.check_collision();
+										self.check_collision();
+					self.check_pellet();
 					if self.pac_up {
-						self.pac_loc[0].1 = self.pac_loc[0].1 - 5;
+						self.pac_loc[0].1 = self.pac_loc[0].1 - 1;
 						self.pac_direction = 1;
 					}
 					else if self.pac_down {
-						self.pac_loc[0].1 = self.pac_loc[0].1 + 5;
+						self.pac_loc[0].1 = self.pac_loc[0].1 + 1;
 						self.pac_direction = 2;
 					}
 					else if self.pac_left {
-						self.pac_loc[0].0 = self.pac_loc[0].0 - 5;
+						self.pac_loc[0].0 = self.pac_loc[0].0 - 1;
 						self.pac_direction = 3;
 					}
 					else if self.pac_right {
-						self.pac_loc[0].0 = self.pac_loc[0].0 + 5;
+						self.pac_loc[0].0 = self.pac_loc[0].0 + 1;
 						self.pac_direction = 4;
 					}
 					self.blinky.update_pac_loc(self.pac_loc[0].0, self.pac_loc[0].1, self.pac_direction); 
@@ -323,6 +377,10 @@ impl Game {
 					self.inky.chase();
 					self.clyde.update_pac_loc(self.pac_loc[0].0, self.pac_loc[0].1, self.pac_direction);
 					self.clyde.chase();
+
+				},
+				_ => {
+
 				}
 			}
 			
