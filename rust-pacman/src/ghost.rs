@@ -21,6 +21,7 @@ pub struct Ghost {
 	cur_direction: i32, // 1 for up, 2 for down, 3 for left, 4 for right
 	directions: Vec<i32>,
 	time: i32,
+	ghost_name: String,
 }
 
 impl Ghost {
@@ -56,6 +57,22 @@ impl Ghost {
 
 		let mut directions: Vec<i32> = Vec::new();
 
+		let mut sprite_name: String = String::new();
+
+		/* Assign the associated sprite name */
+		if (name == "blinky") {
+			sprite_name = String::from("blinky_right.png");
+		}
+		else if (name == "pinky") {
+			sprite_name = String::from("pinky_right.png");
+		}
+		else if (name == "inky") {
+			sprite_name = String::from("inky_right.png");
+		}
+		else if (name == "clyde") {
+			sprite_name = String::from("clyde_right.png");
+		}
+
 		Ghost {
 			loc: location,
 			name: name,
@@ -69,6 +86,7 @@ impl Ghost {
 			blinky_loc: (0,0),
 			directions: directions,
 			time: 0,
+			ghost_name: sprite_name,
 		}
 	}
 
@@ -157,6 +175,10 @@ impl Ghost {
 			}
 		}
 		return false
+	}
+
+	pub fn get_sprite_name(&mut self) -> String {
+		self.ghost_name.clone()
 	}
 
 	pub fn getTwoDistance(&mut self) {
@@ -396,11 +418,34 @@ impl Ghost {
 			}
 		}
 
+		/* Update Location */
 		if self.cur_direction == 1 { self.loc.1 = self.loc.1 - 1; }
 		if self.cur_direction == 2 { self.loc.1 = self.loc.1 + 1; }
 		if self.cur_direction == 3 { self.loc.0 = self.loc.0 - 1; }
 		if self.cur_direction == 4 { self.loc.0 = self.loc.0 + 1; }
 
+		/* Assign the associated sprite name */
+		/*if self.name == "blinky" && self.cur_direction == 1 { self.ghost_name = String::from("blinky_up.png"); }
+		else if self.name == "blinky" && self.cur_direction == 2 { self.ghost_name = String::from("blinky_down.png"); }
+		else if self.name == "blinky" && self.cur_direction == 3 { self.ghost_name = String::from("blinky_left.png"); }
+		else if (self.name == "blinky" && self.cur_direction == 4) { self.ghost_name = String::from("blinky_right.png"); }
+		
+		if self.name == "pinky" && self.cur_direction == 1 { self.ghost_name = String::from("pinky_up.png");}
+		else if self.name == "pinky" && self.cur_direction == 2 { self.ghost_name = String::from("pinky_down.png");}
+		else if self.name == "pinky" && self.cur_direction == 3 { self.ghost_name = String::from("pinky_left.png");}
+		else if self.name == "pinky" && self.cur_direction == 4 { self.ghost_name = String::from("pinky_right.png");}
+		
+		if self.name == "inky" && self.cur_direction == 1 { self.ghost_name = String::from("inky_up.png"); }
+		else if self.name == "inky" && self.cur_direction == 2 { self.ghost_name = String::from("inky_down.png"); }
+		else if self.name == "inky" && self.cur_direction == 3 { self.ghost_name = String::from("inky_left.png"); }
+		else if self.name == "inky" && self.cur_direction == 4 { self.ghost_name = String::from("inky_right.png"); }
+		
+		if self.name == "clyde" && self.cur_direction == 1 { self.ghost_name = String::from("clyde_up.png"); }
+		else if self.name == "clyde" && self.cur_direction == 2 { self.ghost_name = String::from("clyde_down.png"); }
+		else if self.name == "clyde" && self.cur_direction == 3 { self.ghost_name = String::from("clyde_left.png"); }
+		else if self.name == "clyde" && self.cur_direction == 4 { self.ghost_name = String::from("clyde_right.png"); }
+
+	*/
 		self.directions.clear();
 	} 
 
