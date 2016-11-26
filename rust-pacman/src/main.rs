@@ -4,6 +4,7 @@ extern crate find_folder;
 extern crate gfx_device_gl;
 extern crate gfx_graphics;
 extern crate gfx;
+extern crate rand;
 
 mod game;
 mod ghost;

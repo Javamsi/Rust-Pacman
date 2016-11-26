@@ -1,5 +1,6 @@
 extern crate graphics;
 extern crate piston_window;
+extern crate rand;
 
 use piston_window::*;
 use std::fs::File;
@@ -7,6 +8,7 @@ use std::io::{BufRead, BufReader};
 use std::rc::Rc;
 use std::cell::RefCell;
 use game::Game;
+use rand::Rng;
 
 pub struct Ghost {
 	loc: (i32,i32),
@@ -22,6 +24,7 @@ pub struct Ghost {
 	directions: Vec<i32>,
 	time: i32,
 	ghost_name: String,
+	ghost_counter: i32,
 }
 
 impl Ghost {
@@ -76,7 +79,7 @@ impl Ghost {
 		Ghost {
 			loc: location,
 			name: name,
-			state: 2,
+			state: 0,
 			pac_loc: pac_loc,
 			target: (0,0),
 			cur_direction: 1,
@@ -87,6 +90,7 @@ impl Ghost {
 			directions: directions,
 			time: 0,
 			ghost_name: sprite_name,
+			ghost_counter: 0,
 		}
 	}
 
@@ -295,9 +299,20 @@ impl Ghost {
 
 	pub fn chase(&mut self) {
 
+		/* Alternate between Scatter and Attack Modes */
+		if (self.ghost_counter == 700) {
+			self.state = 2;
+		}
+		else if (self.ghost_counter == 2700) {
+			self.state = 0;
+			self.ghost_counter = 0;
+		}
+
+		/* Ghost Logic for each Mode */
 		if self.name == "blinky" {
 			if self.state == 0 {
-				
+				self.target.0 = 0;
+				self.target.1 = 0;
 			}
 			else if self.state == 1 {
 				
@@ -309,7 +324,8 @@ impl Ghost {
 		}
 		else if self.name == "pinky" {
 			if self.state == 0 {
-
+				self.target.0 = 900;
+				self.target.1 = 0;
 			}
 			else if self.state == 1 {
 
@@ -335,7 +351,8 @@ impl Ghost {
 		}
 		else if self.name == "clyde" {
 			if self.state == 0 {
-
+				self.target.0 = 900;
+				self.target.1 = 900;
 			}
 			else if self.state == 1 {
 
@@ -355,7 +372,8 @@ impl Ghost {
 		}
 		else if self.name == "inky" {
 			if self.state == 0 {
-
+				self.target.0 = 0;
+				self.target.1 = 900;
 			}
 			else if self.state == 1 {
 
@@ -392,6 +410,7 @@ impl Ghost {
 		else if self.cur_direction == 3 {self.directions.push(4); }
 		else if self.cur_direction == 4 {self.directions.push(3); }
 
+		/* Check for Intersection */
 		if self.is_intersection() {
 
 			self.check_walls();
@@ -424,8 +443,8 @@ impl Ghost {
 		if self.cur_direction == 3 { self.loc.0 = self.loc.0 - 1; }
 		if self.cur_direction == 4 { self.loc.0 = self.loc.0 + 1; }
 
-		/* Assign the associated sprite name */
-		/*if self.name == "blinky" && self.cur_direction == 1 { self.ghost_name = String::from("blinky_up.png"); }
+		/* Assign the associated sprite image */
+		if self.name == "blinky" && self.cur_direction == 1 { self.ghost_name = String::from("blinky_up.png"); }
 		else if self.name == "blinky" && self.cur_direction == 2 { self.ghost_name = String::from("blinky_down.png"); }
 		else if self.name == "blinky" && self.cur_direction == 3 { self.ghost_name = String::from("blinky_left.png"); }
 		else if (self.name == "blinky" && self.cur_direction == 4) { self.ghost_name = String::from("blinky_right.png"); }
@@ -445,8 +464,12 @@ impl Ghost {
 		else if self.name == "clyde" && self.cur_direction == 3 { self.ghost_name = String::from("clyde_left.png"); }
 		else if self.name == "clyde" && self.cur_direction == 4 { self.ghost_name = String::from("clyde_right.png"); }
 
-	*/
 		self.directions.clear();
+
+		/* Increment ghost counter */
+		if (self.state != 1) {
+			self.ghost_counter = self.ghost_counter + 1;
+		}
 	} 
 
 
