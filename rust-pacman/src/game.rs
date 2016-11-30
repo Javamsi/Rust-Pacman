@@ -6,12 +6,10 @@ extern crate gfx_graphics;
 extern crate gfx;
 
 use piston_window::*;
-use gfx_device_gl::{Resources, CommandBuffer};
+use gfx_device_gl::{Resources};
 use std::fs::File;
 use std::io::{BufRead, BufReader};
 use ghost::Ghost;
-use std::rc::Rc;
-use std::cell::RefCell;
 
 pub struct Game {
 	window: PistonWindow,
@@ -23,12 +21,12 @@ pub struct Game {
 	pac_down: bool,
 	pac_right: bool,
 	pac_left: bool,
+	pac_direction: i32,
 	next_move: i32,
 	blinky: Ghost,
 	pinky: Ghost,
 	inky: Ghost,
 	clyde: Ghost,
-	pac_direction: i32,
 	pacman_sprite: Option<Texture<Resources>>,
 	blinky_sprite: Option<Texture<Resources>>,
 	pinky_sprite: Option<Texture<Resources>>,
@@ -36,6 +34,10 @@ pub struct Game {
 	clyde_sprite: Option<Texture<Resources>>,
 	pac_counter: i32,
 	pac_name: String,
+	game_score: i32,
+	glyphs: Option<Glyphs>,
+	normal_text: Option<Glyphs>,
+	lives: i32,
 }
 
 impl Game {
@@ -48,7 +50,7 @@ impl Game {
 		.build()
 		.unwrap();
 
-		let mut location = Vec::<(i32, i32)>::with_capacity(2);
+		let location = Vec::<(i32, i32)>::with_capacity(2);
 
 		let mut file = BufReader::new(File::open("squarelocation.txt").unwrap());
 		let mut coordinates = Vec::<(i32, i32, i32, i32)>::with_capacity(4);
@@ -84,10 +86,11 @@ impl Game {
 			}
 		}
 
-		let mut blinky: Ghost = Ghost::new(String::from("blinky"), 365, 435);
-		let mut pinky: Ghost = Ghost::new(String::from("pinky"), 425, 435);
-		let mut inky: Ghost = Ghost::new(String::from("inky"), 485, 435);
-		let mut clyde: Ghost = Ghost::new(String::from("clyde"), 545, 435);
+		/* Initialize ghost location */
+		let blinky: Ghost = Ghost::new(String::from("blinky"), 365, 435);
+		let pinky: Ghost = Ghost::new(String::from("pinky"), 425, 435);
+		let inky: Ghost = Ghost::new(String::from("inky"), 485, 435);
+		let clyde: Ghost = Ghost::new(String::from("clyde"), 545, 435);
 
 		Game {
 			window: window,
@@ -112,6 +115,10 @@ impl Game {
 			clyde_sprite: None,
 			pac_counter: 0,
 			pac_name: String::from("pac_right.png"),
+			game_score: 0,
+			glyphs: None,
+			normal_text: None,
+			lives: 3,
 		}
 	}
 
@@ -143,18 +150,6 @@ impl Game {
 
 		/* Pac Man Sprite */
 		let pacman_sprite = assets.join(self.pac_name.clone());
-		if (self.pac_right && self.pac_counter == 0) {
-			self.pac_name = String::from("pac_right_full.png");
-			self.pac_counter = self.pac_counter + 1;
-		}
-		else if (self.pac_right && self.pac_counter == 1) {
-			self.pac_name = String::from("pac_right.png");
-			self.pac_counter = self.pac_counter + 1;
-		}
-		else {
-			self.pac_name = String::from("pac_close.png");
-			self.pac_counter = 0;
-		}
 		let pacman_sprite = Texture::from_path(
 			&mut self.window.factory,
 			&pacman_sprite,
@@ -202,6 +197,24 @@ impl Game {
 			&TextureSettings::new())
 			.unwrap(); 
 		self.clyde_sprite = Some(clyde_sprite);
+
+
+		/* Text */
+		let text_assets = find_folder::Search::ParentsThenKids(3,3)
+						.for_folder("images").unwrap();
+		let ref font = text_assets.join("PAC-FONT.TTF");
+		let factory = self.window.factory.clone();
+		let mut glyphs = Glyphs::new(font, factory).unwrap();
+		self.glyphs = Some(glyphs);
+
+		/* Normal Text */
+		let normal_assets = find_folder::Search::ParentsThenKids(3,3)
+						.for_folder("images").unwrap();
+		let ref normal_font = text_assets.join("emulogic.ttf");
+		let normal_factory = self.window.factory.clone();
+		let mut normal_glyphs = Glyphs::new(normal_font, normal_factory).unwrap();
+		self.normal_text = Some(normal_glyphs);
+
 	}
 
 	pub fn draw(&mut self, ren: RenderArgs, e: Event) {
@@ -209,6 +222,8 @@ impl Game {
 		let mut pellets: Vec<(i32,i32)> = Vec::new();
 		let mut coordinates: Vec<(i32, i32, i32, i32)> = Vec::new();
 		let mut pac_loc: Vec<(i32, i32)> = Vec::new();
+		let mut score: String = self.game_score.to_string(); 
+		let lives: i32 = self.lives;
 
 		/* Ghost Locations */
 		let blinkyx: i32 = self.blinky.get_loc().0;
@@ -220,6 +235,18 @@ impl Game {
 		let clydex: i32 = self.clyde.get_loc().0;
 		let clydey: i32 = self.clyde.get_loc().1;
 
+		if self.pac_right && self.pac_counter == 0 {
+			self.pac_name = String::from("pac_right_full.png");
+			self.pac_counter = self.pac_counter + 1;
+		}
+		else if self.pac_right && self.pac_counter == 1 {
+			self.pac_name = String::from("pac_right.png");
+			self.pac_counter = self.pac_counter + 1;
+		}
+		else {
+			self.pac_name = String::from("pac_close.png");
+			self.pac_counter = 0;
+		}
 
 		/* Pac Man Location*/
 		for &(x,y) in &self.pac_loc { pac_loc.push((x,y)); }
@@ -231,10 +258,11 @@ impl Game {
 		for &(x,y,width,length) in &self.coordinates { coordinates.push((x,y,width,length)); }
 
 		/* Draw Everything */
+
+		/* Draw the Game Board */
 		self.window.draw_2d(&e, |c, g| {
            	clear([0.0, 0.0, 0.0, 1.0], g); 
 
-        	/* Draw the Game Board */
         	for (x,y,width,length) in coordinates {
            		rectangle([0.0, 0.0, 10.0, 1.0], 
                  	[x as f64, y as f64, width as f64, length as f64],
@@ -251,6 +279,69 @@ impl Game {
            	}
         });
 
+        /* Draw the Title, Score, Game Over */
+        match self.glyphs {
+        	None => {},
+        	Some (ref mut glyph) => {
+				self.window.draw_2d(&e, |c, g| {
+					let transform = c.transform.trans(780.0, 340.0);
+		   			text::Text::new_color([1.0, 1.0, 0.0, 1.0], 16).draw(
+            		&"SCORE:",
+            		glyph,
+            		&c.draw_state,
+            		transform, g );
+        		});
+				self.window.draw_2d(&e, |c, g| {
+					let transform = c.transform.trans(390.0, 500.0);
+		   			text::Text::new_color([1.0, 1.0, 0.0, 1.0], 16).draw(
+            		&"PAC-MAN",
+            		glyph,
+            		&c.draw_state,
+            		transform, g );
+        		});
+        		if (self.lives < 1) {
+        			self.window.draw_2d(&e, |c, g| {
+					let transform = c.transform.trans(370.0, 230.0);
+		   			text::Text::new_color([1.0, 1.0, 0.0, 1.0], 16).draw(
+            		&"GAME OVER",
+            		glyph,
+            		&c.draw_state,
+            		transform, g );
+        		});
+        		}
+        	}
+        }
+
+        match self.normal_text {
+        	None => {},
+        	Some (ref mut glyph) => {
+        		self.window.draw_2d(&e, |c, g| {
+					let transform = c.transform.trans(780.0, 380.0);
+		   			text::Text::new_color([1.0, 1.0, 0.0, 1.0], 16).draw(
+            		&score,
+            		glyph,
+            		&c.draw_state,
+            		transform, g );
+        		});
+        	}
+        }
+        
+        /* Draw the Lives */
+        match self.glyphs {
+        	None => {},
+        	Some (ref mut glyph) => {
+				self.window.draw_2d(&e, |c, g| {
+					let transform = c.transform.trans(40.0, 340.0);
+		   			text::Text::new_color([1.0, 1.0, 0.0, 1.0], 16).draw(
+            		&"LIVES:",
+            		glyph,
+            		&c.draw_state,
+            		transform, g );
+        		});
+
+        	}
+        }
+
         /* Draw Pac Man */
         match self.pacman_sprite {
            	None => {}
@@ -259,6 +350,14 @@ impl Game {
            		let center = c.transform.trans((pac_loc[0].0 - 5)as f64, (pac_loc[0].1 - 5) as f64);
            				image(sprite, center, g);
            		});
+
+           		/* Draw lives */
+           		for i in 0..lives {
+        			self.window.draw_2d(&e, |c, g| {
+           				let center = c.transform.trans(40.0 + ((i as f64) * 30.0), 370.0 as f64);
+           					image(sprite, center, g);
+           			});
+        		}
            	}
         }
 
@@ -284,7 +383,7 @@ impl Game {
          	}
         }  
 
-        /* Draw Blinky */
+        /* Draw Inky */
         match self.inky_sprite {
         	None => {}
        		Some(ref sprite) => {
@@ -295,7 +394,7 @@ impl Game {
          	}
         }  
 
-        /* Draw Blinky */
+        /* Draw Clyde */
         match self.clyde_sprite {
         	None => {}
        		Some(ref sprite) => {
@@ -317,43 +416,76 @@ impl Game {
 
 	}
 
+	pub fn update_lives(&mut self) {
+
+		// Decrease number of lives
+		self.lives = self.lives - 1;
+
+		// Reset Ghost and Pacman Locations
+		self.pac_loc[0].0 = 455;
+		self.pac_loc[0].1 = 605;
+
+		self.blinky.set_loc(365,435);
+		self.pinky.set_loc(425,435);
+		self.inky.set_loc(485,435);
+		self.clyde.set_loc(545,435);
+	}
+
 	pub fn check_pellet(&mut self) {
 		let mut counter: usize = 0;
 		for &(x,y) in &self.pellets {
-			if self.pac_loc[0].0 == self.pellets[counter].0 && self.pac_loc[0].1 == self.pellets[counter].1 {
+			if self.pac_loc[0].0 == x && self.pac_loc[0].1 == y {
 				break;
 			}
 			counter = counter + 1;
 		}
-		if (counter < self.pellets.len()) {
+		if counter < self.pellets.len() {
+			self.game_score = self.game_score + 100;
 			self.pellets.remove(counter); 
 		}
+	}
+	pub fn check_ghost_collision(&mut self) -> bool {
+
+		let mut ghost_locations: Vec<(i32, i32)> = Vec::<(i32, i32)>::with_capacity(2);
+		ghost_locations.push(self.blinky.get_loc());
+		ghost_locations.push(self.pinky.get_loc());
+		ghost_locations.push(self.inky.get_loc());
+		ghost_locations.push(self.clyde.get_loc());
+
+		for &(x,y) in &ghost_locations {
+			if self.pac_loc[0].0 - 5 == x + 5 && self.pac_loc[0].1 == y { return true; }
+			else if self.pac_loc[0].0 + 5 == x - 5 && self.pac_loc[0].1 == y { return true; }
+			else if self.pac_loc[0].0 == x && self.pac_loc[0].1 + 5 == y - 5 { return true; }
+			else if self.pac_loc[0].0 == x && self.pac_loc[0].1 - 5 == y + 5 { return true; }
+		}
+
+		return false;
 	}
 
 	pub fn check_collision(&mut self) {
 		
 		for &(x,y) in &self.intersections {
-			if (self.pac_loc[0].0 == x && self.pac_loc[0].1 == y) {
+			if self.pac_loc[0].0 == x && self.pac_loc[0].1 == y {
 				/* Get New direction */
-				if (self.next_move == 1) {
+				if self.next_move == 1 {
 					self.pac_up = true;
 					self.pac_down = false;
 					self.pac_left = false;
 					self.pac_right = false;
 				}
-				else if (self.next_move == 2) {
+				else if self.next_move == 2 {
 					self.pac_down = true;
 					self.pac_up = false;
 					self.pac_right = false;
 					self.pac_left = false;
 				}
-				else if (self.next_move == 3) {
+				else if self.next_move == 3 {
 					self.pac_left = true;
 					self.pac_up = false;
 					self.pac_right = false;
 					self.pac_down = false;
 				}
-				else if (self.next_move == 4) {
+				else if self.next_move == 4 {
 					self.pac_right = true;
 					self.pac_up = false;
 					self.pac_down = false;
@@ -363,68 +495,68 @@ impl Game {
 		}
 
 		/* Change to opposite direction if in the middle */
-		if (self.next_move == 1 && self.pac_down) {
+		if self.next_move == 1 && self.pac_down {
 			self.pac_up = true;
 			self.pac_down = false;
 			self.next_move = 0;
 		}
-		else if (self.next_move == 2 && self.pac_up) {
+		else if self.next_move == 2 && self.pac_up {
 			self.pac_down = true;
 			self.pac_up = false;
 			self.next_move = 0;
 		}
-		else if (self.next_move == 3 && self.pac_right) {
+		else if self.next_move == 3 && self.pac_right {
 			self.pac_left = true;
 			self.pac_right = false;
 			self.next_move = 0;
 		}
-		else if (self.next_move == 4 && self.pac_left) {
+		else if self.next_move == 4 && self.pac_left {
 			self.pac_right = true;
 			self.pac_left = false;
 			self.next_move = 0;
 		}		
 
 		for &(x,y,width,length) in &self.coordinates {
-			if (width == 10) {
-				if (y > y + length) {
-					if (self.pac_loc[0].1 >= y + length && self.pac_loc[0].1 <= y 
-						&& self.pac_loc[0].0 + 25 >= x && self.pac_loc[0].0 < x && self.pac_right) {
+			if width == 10 {
+				if y > y + length {
+					if self.pac_loc[0].1 >= y + length && self.pac_loc[0].1 <= y 
+						&& self.pac_loc[0].0 + 25 >= x && self.pac_loc[0].0 < x && self.pac_right {
 						self.pac_right = false;
 					}
-					else if (self.pac_loc[0].1 >= y + length && self.pac_loc[0].1 <= y 
-						&& self.pac_loc[0].0 - 25 <= x && self.pac_loc[0].0 > x && self.pac_left) {
+					else if self.pac_loc[0].1 >= y + length && self.pac_loc[0].1 <= y 
+						&& self.pac_loc[0].0 - 25 <= x && self.pac_loc[0].0 > x && self.pac_left {
 						self.pac_left = false;
 					}
 				}
-				else if (y < y + length) {
-					if (self.pac_loc[0].1 >= y && self.pac_loc[0].1 <= y + length
-						&& self.pac_loc[0].0 + 25 >= x && self.pac_loc[0].0 < x && self.pac_right) {
+				else if y < y + length {
+					if self.pac_loc[0].1 >= y && self.pac_loc[0].1 <= y + length
+						&& self.pac_loc[0].0 + 25 >= x && self.pac_loc[0].0 < x && self.pac_right {
 						self.pac_right = false;
 					}
-					else if (self.pac_loc[0].1 >= y && self.pac_loc[0].1 <= y + length
-						&& self.pac_loc[0].0 - 25 <= x && self.pac_loc[0].0 > x && self.pac_left) {
+					else if self.pac_loc[0].1 >= y && self.pac_loc[0].1 <= y + length
+						&& self.pac_loc[0].0 - 25 <= x && self.pac_loc[0].0 > x && self.pac_left {
 						self.pac_left = false;
 					}
 				}
 			}
-			else if (length == 10) {
-				if (x > x + width) {
-					if (self.pac_loc[0].0 >= x + width && self.pac_loc[0].0 <= x
-						&& self.pac_loc[0].1 + 25 >= y && self.pac_loc[0].1 < y && self.pac_down) {
+			else if length == 10 {
+				if x > x + width {
+					if self.pac_loc[0].0 >= x + width && self.pac_loc[0].0 <= x
+						&& self.pac_loc[0].1 + 25 >= y && self.pac_loc[0].1 < y && self.pac_down {
 						self.pac_down = false;
 					}
-					else if (self.pac_loc[0].0 >= x + width && self.pac_loc[0].0 <= x 
-						&& self.pac_loc[0].1 - 25 <= y && self.pac_loc[0].1 > y && self.pac_up) {
+					else if self.pac_loc[0].0 >= x + width && self.pac_loc[0].0 <= x 
+						&& self.pac_loc[0].1 - 25 <= y && self.pac_loc[0].1 > y && self.pac_up {
 						self.pac_up = false;
 					}
 				}
-				else if (x < x + width) {
-					if (self.pac_loc[0].0 >= x && self.pac_loc[0].0 <= x + width
-						&& self.pac_loc[0].1 + 25 >= y && self.pac_loc[0].1 < y && self.pac_down) {
+				else if x < x + width {
+					if self.pac_loc[0].0 >= x && self.pac_loc[0].0 <= x + width
+						&& self.pac_loc[0].1 + 25 >= y && self.pac_loc[0].1 < y && self.pac_down {
 						self.pac_down = false;
 					}
-					else if (self.pac_loc[0].0 >= x && self.pac_loc[0].0 <= x + width
-						&& self.pac_loc[0].1 - 25 <= y && self.pac_loc[0].1 > y && self.pac_up) {
+					else if self.pac_loc[0].0 >= x && self.pac_loc[0].0 <= x + width
+						&& self.pac_loc[0].1 - 25 <= y && self.pac_loc[0].1 > y && self.pac_up {
 						self.pac_up = false;
 					}
 				}
@@ -453,32 +585,38 @@ impl Game {
 				Event::Update(upd) => {
 					self.check_collision();
 					self.check_pellet();
-					if self.pac_up {
-						self.pac_loc[0].1 = self.pac_loc[0].1 - 1;
-						self.pac_direction = 1;
-					}
-					else if self.pac_down {
-						self.pac_loc[0].1 = self.pac_loc[0].1 + 1;
-						self.pac_direction = 2;
-					}
-					else if self.pac_left {
-						self.pac_loc[0].0 = self.pac_loc[0].0 - 1;
-						self.pac_direction = 3;
-					}
-					else if self.pac_right {
-						self.pac_loc[0].0 = self.pac_loc[0].0 + 1;
-						self.pac_direction = 4;
-					}
-					self.blinky.update_pac_loc(self.pac_loc[0].0, self.pac_loc[0].1, self.pac_direction); 
-					self.blinky.chase();
-					self.pinky.update_pac_loc(self.pac_loc[0].0, self.pac_loc[0].1, self.pac_direction);
-					self.pinky.chase();
-					self.inky.update_pac_loc(self.pac_loc[0].0, self.pac_loc[0].1, self.pac_direction);
-					self.inky.update_blinky_loc(self.blinky.get_loc().0, self.blinky.get_loc().1);
-					self.inky.chase();
-					self.clyde.update_pac_loc(self.pac_loc[0].0, self.pac_loc[0].1, self.pac_direction);
-					self.clyde.chase();
 
+					if !self.check_ghost_collision() && self.lives > 0 {
+
+						if self.pac_up {
+							self.pac_loc[0].1 = self.pac_loc[0].1 - 1;
+							self.pac_direction = 1;
+						}
+						else if self.pac_down {
+							self.pac_loc[0].1 = self.pac_loc[0].1 + 1;
+							self.pac_direction = 2;
+						}
+						else if self.pac_left {
+							self.pac_loc[0].0 = self.pac_loc[0].0 - 1;
+							self.pac_direction = 3;
+						}
+						else if self.pac_right {
+							self.pac_loc[0].0 = self.pac_loc[0].0 + 1;
+							self.pac_direction = 4;
+						}
+						self.blinky.update_pac_loc(self.pac_loc[0].0, self.pac_loc[0].1, self.pac_direction); 
+						self.blinky.chase();
+						self.pinky.update_pac_loc(self.pac_loc[0].0, self.pac_loc[0].1, self.pac_direction);
+						self.pinky.chase();
+						self.inky.update_pac_loc(self.pac_loc[0].0, self.pac_loc[0].1, self.pac_direction);
+						self.inky.update_blinky_loc(self.blinky.get_loc().0, self.blinky.get_loc().1);
+						self.inky.chase();
+						self.clyde.update_pac_loc(self.pac_loc[0].0, self.pac_loc[0].1, self.pac_direction);
+						self.clyde.chase();
+					}
+					else {
+						self.update_lives();
+					}
 				},
 				_ => {
 

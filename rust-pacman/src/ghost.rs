@@ -2,12 +2,8 @@ extern crate graphics;
 extern crate piston_window;
 extern crate rand;
 
-use piston_window::*;
 use std::fs::File;
 use std::io::{BufRead, BufReader};
-use std::rc::Rc;
-use std::cell::RefCell;
-use game::Game;
 use rand::Rng;
 
 pub struct Ghost {
@@ -22,7 +18,6 @@ pub struct Ghost {
 	intersections: Vec<(i32, i32)>,
 	cur_direction: i32, // 1 for up, 2 for down, 3 for left, 4 for right
 	directions: Vec<i32>,
-	time: i32,
 	ghost_name: String,
 	ghost_counter: i32,
 }
@@ -54,25 +49,25 @@ impl Ghost {
 			}
 		}
 
-		let mut location = (start_x, start_y);
+		let location = (start_x, start_y);
 
-		let mut pac_loc = (0, 0);
+		let pac_loc = (0, 0);
 
-		let mut directions: Vec<i32> = Vec::new();
+		let directions: Vec<i32> = Vec::new();
 
 		let mut sprite_name: String = String::new();
 
 		/* Assign the associated sprite name */
-		if (name == "blinky") {
+		if name == "blinky" {
 			sprite_name = String::from("blinky_right.png");
 		}
-		else if (name == "pinky") {
+		else if name == "pinky" {
 			sprite_name = String::from("pinky_right.png");
 		}
-		else if (name == "inky") {
+		else if name == "inky" {
 			sprite_name = String::from("inky_right.png");
 		}
-		else if (name == "clyde") {
+		else if name == "clyde" {
 			sprite_name = String::from("clyde_right.png");
 		}
 
@@ -88,7 +83,6 @@ impl Ghost {
 			pac_direction: 0,
 			blinky_loc: (0,0),
 			directions: directions,
-			time: 0,
 			ghost_name: sprite_name,
 			ghost_counter: 0,
 		}
@@ -106,6 +100,11 @@ impl Ghost {
 	}
 
 	pub fn get_loc(&mut self) -> (i32,i32) { self.loc }
+
+	pub fn set_loc(&mut self, x: i32, y: i32) {
+		self.loc.0 = x;
+		self.loc.1 = y;
+	}
 
 	pub fn check_walls(&mut self) {
 		for &(x,y,width,length) in &self.coordinates {
@@ -147,9 +146,9 @@ impl Ghost {
 							self.directions.push(2);
 						}
 					}
-					else if (self.loc.0 >= x + width && self.loc.0 <= x 
-						&& self.loc.1 - 25 <= y && self.loc.1 > y) {
-						if (!self.directions.contains(&1)) {
+					else if self.loc.0 >= x + width && self.loc.0 <= x 
+						&& self.loc.1 - 25 <= y && self.loc.1 > y {
+						if !self.directions.contains(&1) {
 							self.directions.push(1);
 						}
 					}
@@ -185,24 +184,23 @@ impl Ghost {
 		self.ghost_name.clone()
 	}
 
-	pub fn getTwoDistance(&mut self) {
-		let mut upx: i32 = self.loc.0;
-		let mut upy: i32 = self.loc.1 - 5;
-		let mut downx: i32 = self.loc.0;
-		let mut downy: i32 = self.loc.1 + 5;
-		let mut leftx: i32 = self.loc.0 - 5;
-		let mut lefty: i32 = self.loc.1;
-		let mut rightx: i32 = self.loc.0 + 5;
-		let mut righty: i32 = self.loc.1;
-		let mut dir: i32 = 0;
+	pub fn get_two_distance(&mut self) {
+		let upx: i32 = self.loc.0;
+		let upy: i32 = self.loc.1 - 5;
+		let downx: i32 = self.loc.0;
+		let downy: i32 = self.loc.1 + 5;
+		let leftx: i32 = self.loc.0 - 5;
+		let lefty: i32 = self.loc.1;
+		let rightx: i32 = self.loc.0 + 5;
+		let righty: i32 = self.loc.1;
 		
-		let mut up_dist: i32 = ((self.target.0 - upx) * (self.target.0 - upx))
+		let up_dist: i32 = ((self.target.0 - upx) * (self.target.0 - upx))
 						+ ((self.target.1 - upy) * (self.target.1 - upy));
-		let mut down_dist: i32 = ((self.target.0 - downx) * (self.target.0 - downx))
+		let down_dist: i32 = ((self.target.0 - downx) * (self.target.0 - downx))
 						+ ((self.target.1 - downy) * (self.target.1 - downy));
-		let mut left_dist: i32 = ((self.target.0 - leftx) * (self.target.0 - leftx))
+		let left_dist: i32 = ((self.target.0 - leftx) * (self.target.0 - leftx))
 						+ ((self.target.1 - lefty) * (self.target.1 - lefty));
-		let mut right_dist: i32 = ((self.target.0 - rightx) * (self.target.0 - rightx))
+		let right_dist: i32 = ((self.target.0 - rightx) * (self.target.0 - rightx))
 						+ ((self.target.1 - righty) * (self.target.1 - righty));
 
 		if self.cur_direction == 1 && self.directions.contains(&3) {
@@ -255,24 +253,23 @@ impl Ghost {
 		}						
 	}
 
-	pub fn getFourDistance(&mut self) {
-		let mut upx: i32 = self.loc.0;
-		let mut upy: i32 = self.loc.1 - 5;
-		let mut downx: i32 = self.loc.0;
-		let mut downy: i32 = self.loc.1 + 5;
-		let mut leftx: i32 = self.loc.0 - 5;
-		let mut lefty: i32 = self.loc.1;
-		let mut rightx: i32 = self.loc.0 + 5;
-		let mut righty: i32 = self.loc.1;
-		let mut dir: i32 = 0;
+	pub fn get_three_distance(&mut self) {
+		let upx: i32 = self.loc.0;
+		let upy: i32 = self.loc.1 - 5;
+		let downx: i32 = self.loc.0;
+		let downy: i32 = self.loc.1 + 5;
+		let leftx: i32 = self.loc.0 - 5;
+		let lefty: i32 = self.loc.1;
+		let rightx: i32 = self.loc.0 + 5;
+		let righty: i32 = self.loc.1;
 		
-		let mut up_dist: i32 = ((self.target.0 - upx) * (self.target.0 - upx))
+		let up_dist: i32 = ((self.target.0 - upx) * (self.target.0 - upx))
 						+ ((self.target.1 - upy) * (self.target.1 - upy));
-		let mut down_dist: i32 = ((self.target.0 - downx) * (self.target.0 - downx))
+		let down_dist: i32 = ((self.target.0 - downx) * (self.target.0 - downx))
 						+ ((self.target.1 - downy) * (self.target.1 - downy));
-		let mut left_dist: i32 = ((self.target.0 - leftx) * (self.target.0 - leftx))
+		let left_dist: i32 = ((self.target.0 - leftx) * (self.target.0 - leftx))
 						+ ((self.target.1 - lefty) * (self.target.1 - lefty));
-		let mut right_dist: i32 = ((self.target.0 - rightx) * (self.target.0 - rightx))
+		let right_dist: i32 = ((self.target.0 - rightx) * (self.target.0 - rightx))
 						+ ((self.target.1 - righty) * (self.target.1 - righty));
 
 		if self.cur_direction == 1 {
@@ -300,10 +297,10 @@ impl Ghost {
 	pub fn chase(&mut self) {
 
 		/* Alternate between Scatter and Attack Modes */
-		if (self.ghost_counter == 700) {
+		if self.ghost_counter == 700 {
 			self.state = 2;
 		}
-		else if (self.ghost_counter == 2700) {
+		else if self.ghost_counter == 2700 {
 			self.state = 0;
 			self.ghost_counter = 0;
 		}
@@ -358,8 +355,8 @@ impl Ghost {
 
 			}
 			else {
-				let mut sq_distancex = (self.loc.0 - self.pac_loc.0) * (self.loc.0 - self.pac_loc.0);
-				let mut sq_distancey = (self.loc.0 - self.pac_loc.0) * (self.loc.0 - self.pac_loc.0);
+				let sq_distancex = (self.loc.0 - self.pac_loc.0) * (self.loc.0 - self.pac_loc.0);
+				let sq_distancey = (self.loc.0 - self.pac_loc.0) * (self.loc.0 - self.pac_loc.0);
 				if (sq_distancex + sq_distancey) < 25600 {
 					self.target.0 = 0;
 					self.target.1 = 0;
@@ -430,10 +427,10 @@ impl Ghost {
 				}
 			}
 			else if self.directions.len() == 2 {
-				self.getTwoDistance();
+				self.get_two_distance();
 			}
 			else if self.directions.len() == 1 {
-				self.getFourDistance();
+				self.get_three_distance();
 			}
 		}
 
@@ -447,7 +444,7 @@ impl Ghost {
 		if self.name == "blinky" && self.cur_direction == 1 { self.ghost_name = String::from("blinky_up.png"); }
 		else if self.name == "blinky" && self.cur_direction == 2 { self.ghost_name = String::from("blinky_down.png"); }
 		else if self.name == "blinky" && self.cur_direction == 3 { self.ghost_name = String::from("blinky_left.png"); }
-		else if (self.name == "blinky" && self.cur_direction == 4) { self.ghost_name = String::from("blinky_right.png"); }
+		else if self.name == "blinky" && self.cur_direction == 4 { self.ghost_name = String::from("blinky_right.png"); }
 		
 		if self.name == "pinky" && self.cur_direction == 1 { self.ghost_name = String::from("pinky_up.png");}
 		else if self.name == "pinky" && self.cur_direction == 2 { self.ghost_name = String::from("pinky_down.png");}
@@ -467,7 +464,7 @@ impl Ghost {
 		self.directions.clear();
 
 		/* Increment ghost counter */
-		if (self.state != 1) {
+		if self.state != 1 {
 			self.ghost_counter = self.ghost_counter + 1;
 		}
 	} 
