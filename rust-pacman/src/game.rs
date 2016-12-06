@@ -1606,6 +1606,14 @@ impl Game {
 						self.inky.chase();
 						self.clyde.update_pac_loc(self.pac_loc[0].0, self.pac_loc[0].1, self.pac_direction);
 						self.clyde.chase();
+						if self.pac_loc[0].0 == 875 && self.pac_loc[0].1 == 435 {
+							self.pac_loc[0].0 = 35;
+							self.pac_loc[0].1 = 435;
+						}
+						if self.pac_loc[0].0 == 35 && self.pac_loc[0].1 == 435 {
+							self.pac_loc[0].0 = 875;
+							self.pac_loc[0].1 = 435;
+						}
 					}
 					else if self.game_won{
 
