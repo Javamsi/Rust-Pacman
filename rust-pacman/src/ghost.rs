@@ -4,13 +4,13 @@ extern crate rand;
 
 use std::fs::File;
 use std::io::{BufRead, BufReader};
-use rand::Rng;
+use rand::{thread_rng, Rng};
 
 pub struct Ghost {
 	loc: (i32,i32),
 	target: (i32, i32),
 	name: String,
-	state: i32, //0 for scatter, 1 for frightened, 2 for attack
+	state: i32, //0 for scatter, 1 for frightened, 2 for attack, 3 for home
 	pac_loc: (i32, i32),
 	blinky_loc: (i32, i32),
 	pac_direction: i32,
@@ -20,6 +20,7 @@ pub struct Ghost {
 	directions: Vec<i32>,
 	ghost_name: String,
 	ghost_counter: i32,
+	home: (i32, i32),
 }
 
 impl Ghost {
@@ -85,6 +86,7 @@ impl Ghost {
 			directions: directions,
 			ghost_name: sprite_name,
 			ghost_counter: 0,
+			home: (0,0),
 		}
 	}
 
@@ -105,6 +107,19 @@ impl Ghost {
 		self.loc.0 = x;
 		self.loc.1 = y;
 	}
+
+	pub fn set_home(&mut self, x: i32, y: i32) {
+		self.home.0 = x;
+		self.home.1 = y;
+	} 
+
+	pub fn get_state(&mut self) -> i32 {self.state } 
+
+	pub fn set_state(&mut self, state: i32) {
+		self.state = state;
+	}
+
+	pub fn get_direction(&mut self) -> (i32) { self.cur_direction }
 
 	pub fn check_walls(&mut self) {
 		for &(x,y,width,length) in &self.coordinates {
@@ -296,6 +311,8 @@ impl Ghost {
 
 	pub fn chase(&mut self) {
 
+		let mut rng = thread_rng();
+
 		/* Alternate between Scatter and Attack Modes */
 		if self.ghost_counter == 700 {
 			self.state = 2;
@@ -312,11 +329,19 @@ impl Ghost {
 				self.target.1 = 0;
 			}
 			else if self.state == 1 {
-				
+				self.target.0 = rng.gen_range(30,850);
+				self.target.1 = rng.gen_range(30,850);
 			}
-			else {
+			else if self.state == 2 {
 				self.target.0 = self.pac_loc.0;
 				self.target.1 = self.pac_loc.1;
+			}
+			else {
+				self.target.0 = self.home.0;
+				self.target.1 = self.home.1;
+				if self.loc.0 == self.home.0 && self.loc.1 == self.home.1 {
+					self.state = 2;
+				}
 			}
 		}
 		else if self.name == "pinky" {
@@ -325,9 +350,10 @@ impl Ghost {
 				self.target.1 = 0;
 			}
 			else if self.state == 1 {
-
+				self.target.0 = rng.gen_range(30,850);
+				self.target.1 = rng.gen_range(30,850);
 			}
-			else {
+			else if self.state == 2 {
 				if self.pac_direction == 1 {
 					self.target.0 = self.pac_loc.0;
 					self.target.1 = self.pac_loc.1 - 20;
@@ -345,6 +371,13 @@ impl Ghost {
 					self.target.1 = self.pac_loc.1;
 				}
 			}
+			else {
+				self.target.0 = self.home.0;
+				self.target.1 = self.home.1;
+				if (self.loc.0 == self.home.0 && self.loc.1 == self.home.1) {
+					self.state = 2;
+				}
+			}
 		}
 		else if self.name == "clyde" {
 			if self.state == 0 {
@@ -352,9 +385,10 @@ impl Ghost {
 				self.target.1 = 900;
 			}
 			else if self.state == 1 {
-
+				self.target.0 = rng.gen_range(30,850);
+				self.target.1 = rng.gen_range(30,850);
 			}
-			else {
+			else if self.state == 2 {
 				let sq_distancex = (self.loc.0 - self.pac_loc.0) * (self.loc.0 - self.pac_loc.0);
 				let sq_distancey = (self.loc.0 - self.pac_loc.0) * (self.loc.0 - self.pac_loc.0);
 				if (sq_distancex + sq_distancey) < 25600 {
@@ -366,6 +400,13 @@ impl Ghost {
 					self.target.1 = self.pac_loc.1;
 				}
 			}
+			else {
+				self.target.0 = self.home.0;
+				self.target.1 = self.home.1;
+				if (self.loc.0 == self.home.0 && self.loc.1 == self.home.1) {
+					self.state = 2;
+				}
+			}
 		}
 		else if self.name == "inky" {
 			if self.state == 0 {
@@ -373,9 +414,10 @@ impl Ghost {
 				self.target.1 = 900;
 			}
 			else if self.state == 1 {
-
+				self.target.0 = rng.gen_range(30,850);
+				self.target.1 = rng.gen_range(30,850);
 			}
-			else {
+			else if self.state == 2 {
 				let mut offsetx: i32 = 0;
 				let mut offsety: i32 = 0;
 
@@ -398,6 +440,13 @@ impl Ghost {
 
 				self.target.0 = self.pac_loc.0 + (offsetx - self.blinky_loc.0);
 				self.target.1 = self.pac_loc.1 + (offsety - self.blinky_loc.1);
+			}
+			else {
+				self.target.0 = self.home.0;
+				self.target.1 = self.home.1;
+				if (self.loc.0 == self.home.0 && self.loc.1 == self.home.1) {
+					self.state = 2;
+				}
 			}
 		}
 
@@ -440,34 +489,11 @@ impl Ghost {
 		if self.cur_direction == 3 { self.loc.0 = self.loc.0 - 1; }
 		if self.cur_direction == 4 { self.loc.0 = self.loc.0 + 1; }
 
-		/* Assign the associated sprite image */
-		if self.name == "blinky" && self.cur_direction == 1 { self.ghost_name = String::from("blinky_up.png"); }
-		else if self.name == "blinky" && self.cur_direction == 2 { self.ghost_name = String::from("blinky_down.png"); }
-		else if self.name == "blinky" && self.cur_direction == 3 { self.ghost_name = String::from("blinky_left.png"); }
-		else if self.name == "blinky" && self.cur_direction == 4 { self.ghost_name = String::from("blinky_right.png"); }
-		
-		if self.name == "pinky" && self.cur_direction == 1 { self.ghost_name = String::from("pinky_up.png");}
-		else if self.name == "pinky" && self.cur_direction == 2 { self.ghost_name = String::from("pinky_down.png");}
-		else if self.name == "pinky" && self.cur_direction == 3 { self.ghost_name = String::from("pinky_left.png");}
-		else if self.name == "pinky" && self.cur_direction == 4 { self.ghost_name = String::from("pinky_right.png");}
-		
-		if self.name == "inky" && self.cur_direction == 1 { self.ghost_name = String::from("inky_up.png"); }
-		else if self.name == "inky" && self.cur_direction == 2 { self.ghost_name = String::from("inky_down.png"); }
-		else if self.name == "inky" && self.cur_direction == 3 { self.ghost_name = String::from("inky_left.png"); }
-		else if self.name == "inky" && self.cur_direction == 4 { self.ghost_name = String::from("inky_right.png"); }
-		
-		if self.name == "clyde" && self.cur_direction == 1 { self.ghost_name = String::from("clyde_up.png"); }
-		else if self.name == "clyde" && self.cur_direction == 2 { self.ghost_name = String::from("clyde_down.png"); }
-		else if self.name == "clyde" && self.cur_direction == 3 { self.ghost_name = String::from("clyde_left.png"); }
-		else if self.name == "clyde" && self.cur_direction == 4 { self.ghost_name = String::from("clyde_right.png"); }
-
 		self.directions.clear();
 
 		/* Increment ghost counter */
-		if self.state != 1 {
+		if self.state != 1 && self.state != 3 {
 			self.ghost_counter = self.ghost_counter + 1;
 		}
 	} 
-
-
 }
